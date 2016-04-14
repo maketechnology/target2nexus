@@ -1,0 +1,17 @@
+{
+  "name": "target2nexus",
+  "version": "1.0.0",
+  "description": "Creates a script to add nexus repos from eclipse .target platform file",
+  "main": "bin/target2nexus.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+      "target2nexus": "bin/target2nexus.js"
+  },
+  "author": "Guillermo Zunino",
+  "license": "ISC",
+  "dependencies": {
+    "xml2js": "^0.4.16"
+  }
+}
