@@ -69,9 +69,14 @@ function run(targetPath) {
           };
           out('curl -X POST -u '+cred+' -H "Content-Type: application/json" -d \''+JSON.stringify(newRepo)+'\' '+url+'/repositories');
 
+          function validMirrorId(repoId) {
+            var cleanString = repoId.replace(/[@\|\%&\$<\(\)>\+\,/\:\?\*\\]/g, "");
+            return cleanString;
+          }
+
           mirrors.push({
             //mirror: {
-              id: repoId + '.mirror',
+              id: validMirrorId(repoId) + '.mirror',
               name: repoId + ' Mirror',
               // tycho uses url as id for .target files: https://wiki.eclipse.org/Tycho/Target_Platform/Authentication_and_Mirrors
               mirrorOf: repoId,
