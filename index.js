@@ -3,7 +3,7 @@ var fs = require('fs');
 var xml2js = require('xml2js');
 
 var nexus = {
-  url: 'http://172.17.0.2:8081/nexus',
+  url: 'http://localhost:8081/nexus',
   user: 'admin',
   pass: 'admin123'
 };
