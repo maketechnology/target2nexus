@@ -3,7 +3,7 @@ var fs = require('fs');
 var xml2js = require('xml2js');
 
 var nexus = {
-  url: 'http://localhost:8081/nexus',
+  url: '',
   user: 'admin',
   pass: 'admin123'
 };
@@ -30,6 +30,8 @@ function run(targetPath) {
         }
 
         out('#!/bin/sh');
+        out('url=$1');
+        out('echo Nexus url: $url');
 
         var mirrors = [];
 
@@ -155,6 +157,7 @@ function rmTraillingSlash(site) {
   return site.replace(/\/+$/, "");
 }
 
-exports.init = function(targetPath) {
+exports.init = function(targetPath, nexus_url) {
+  nexus.url = nexus_url;
   run(targetPath);
 };
