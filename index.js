@@ -16,13 +16,13 @@ function run(targetPath) {
       console.log("Cannot parse xml:", err);
       process.exit(-1);
     }
-    var url = nexus.url + '/service/local';
-    var cred = nexus.user+':'+nexus.pass;
 
     var parser = new xml2js.Parser();
     parser.parseString(data, function (err, result) {
       //console.log(JSON.stringify(result, null,  2));
       //console.log(JSON.stringify(result.locations, null,  2));
+      var cred = nexus.user+':'+nexus.pass;
+      
       var stream = fs.createWriteStream("postToNexus.sh");
       stream.once('open', function(fd) {
         function out(args) {
@@ -30,7 +30,7 @@ function run(targetPath) {
         }
 
         out('#!/bin/sh');
-        out('url=$1');
+        out('url=' + nexus.urlForScript);
         out('echo Nexus url: $url');
 
         var mirrors = [];
@@ -67,7 +67,7 @@ function run(targetPath) {
               }
             }
           };
-          out('curl -X POST -u '+cred+' -H "Content-Type: application/json" -d \''+JSON.stringify(newRepo)+'\' '+url+'/repositories');
+          out('curl -X POST -u '+cred+' -H "Content-Type: application/json" -d \''+JSON.stringify(newRepo)+'\' $url/repositories');
 
           function validMirrorId(repoId) {
             var cleanString = repoId.replace(/[@\|\%&\$<\(\)>\+\,/\:\?\*\\]/g, "");
@@ -80,7 +80,7 @@ function run(targetPath) {
               name: repoId + ' Mirror',
               // tycho uses url as id for .target files: https://wiki.eclipse.org/Tycho/Target_Platform/Authentication_and_Mirrors
               mirrorOf: repoId,
-              url: '${nexus.url}' + '/content/repositories/'+ repoId,
+              url: nexus.urlForMaven + '/content/repositories/'+ repoId,
               layout: 'p2',
               mirrorOfLayouts: 'p2'
             //}
@@ -88,7 +88,7 @@ function run(targetPath) {
         });
 
         out('echo "Nexus Repositories:"');
-        out('curl '+url+'/repositories | grep name');
+        out('curl $url/repositories | grep name');
 
         stream.end();
 
@@ -108,7 +108,7 @@ function createSettings(mirrors) {
     //mirror: {
       id: 'internal-repository',
       name: 'Maven Repository Manager running on Nexus',
-      url: '${nexus.url}' + '/content/groups/public/',
+      url: nexus.urlForMaven + '/content/groups/public/',
       mirrorOf: '*'
     //}
   });
@@ -162,7 +162,10 @@ function rmTraillingSlash(site) {
   return site.replace(/\/+$/, "");
 }
 
-exports.init = function(targetPath, nexus_url) {
+exports.init = function(targetPath, nexus_url, useInMaven, useInNexus) {
   nexus.url = nexus_url;
+  nexus.urlForMaven = (useInMaven) ? nexus_url : '${nexus.url}';
+  var serviceUrl = nexus.url + '/service/local';
+  nexus.urlForScript = (useInNexus) ? serviceUrl : "$1" ;
   run(targetPath);
 };
