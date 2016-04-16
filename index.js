@@ -30,7 +30,7 @@ function run(targetPath) {
         }
 
         out('#!/bin/sh');
-        out('url=' + nexus.urlForScript);
+        out('url=' + nexus.urlForScript + '/service/local');
         out('echo Nexus url: $url');
 
         var mirrors = [];
@@ -165,7 +165,6 @@ function rmTraillingSlash(site) {
 exports.init = function(targetPath, nexus_url, useInMaven, useInNexus) {
   nexus.url = nexus_url;
   nexus.urlForMaven = (useInMaven) ? nexus_url : '${nexus.url}';
-  var serviceUrl = nexus.url + '/service/local';
-  nexus.urlForScript = (useInNexus) ? serviceUrl : "$1" ;
+  nexus.urlForScript = (useInNexus) ? nexus_url : "$1" ;
   run(targetPath);
 };
