@@ -38,9 +38,10 @@ function run(targetPath) {
         result.target.locations[0].location.forEach(function(location) {
           var repo = location.repository[0].$;
 
-          var repoId = repo.id || rmTraillingSlash(repo.location);
+          var repoId = repo.id || rmTrailingSlash(repo.location);
+          var repoLocation = addTrailingSlash(repo.location);
 
-          out('echo "Posting new repo: '+ repoId + ', ' + repo.location +'"');
+          out('echo "Posting new repo: '+ repoId + ', ' + repoLocation +'"');
           var newRepo = {
             "data": {
               "repoType": "proxy",
@@ -61,7 +62,7 @@ function run(targetPath) {
               "exposed": true,
               "checksumPolicy": "WARN",
               "remoteStorage": {
-                "remoteStorageUrl": repo.location,
+                "remoteStorageUrl": repoLocation,
                 "authentication": null,
                 "connectionSettings": null
               }
@@ -80,7 +81,7 @@ function run(targetPath) {
               name: repoId + ' Mirror',
               // tycho uses url as id for .target files: https://wiki.eclipse.org/Tycho/Target_Platform/Authentication_and_Mirrors
               mirrorOf: repoId,
-              url: nexus.urlForMaven + '/content/repositories/'+ repoId,
+              url: nexus.urlForMaven + '/content/repositories/'+ repoLocation,
               layout: 'p2',
               mirrorOfLayouts: 'p2'
             //}
@@ -158,8 +159,12 @@ function createSettings(mirrors) {
   });
 }
 
-function rmTraillingSlash(site) {
+function rmTrailingSlash(site) {
   return site.replace(/\/+$/, "");
+}
+
+function addTrailingSlash(site) {
+  return site.replace(/\/?$/, '/');
 }
 
 exports.init = function(targetPath, nexus_url, useInMaven, useInNexus) {
