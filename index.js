@@ -81,7 +81,7 @@ function run(targetPath) {
               name: repoId + ' Mirror',
               // tycho uses url as id for .target files: https://wiki.eclipse.org/Tycho/Target_Platform/Authentication_and_Mirrors
               mirrorOf: repoId,
-              url: nexus.urlForMaven + '/content/repositories/'+ repoLocation,
+              url: nexus.urlForMaven + '/content/repositories/'+ repoId + '/',
               layout: 'p2',
               mirrorOfLayouts: 'p2'
             //}
