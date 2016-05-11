@@ -39,7 +39,7 @@ function run(targetPath, repoIds) {
           postProxiesFromTarget(result, mirrors, out, cred);
 
           out('echo "Nexus Repositories:"');
-          out('curl $url/repositories | grep "name|http"');
+          out("curl $url/repositories | grep -E '<id>|contentResourceURI'");
 
           stream.end();
 
