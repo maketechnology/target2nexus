@@ -11,82 +11,31 @@ var nexus = {
 //console.log("Using target file:", targetPath);
 
 function run(targetPath) {
-  fs.readFile(targetPath, function(err, data) {
-    if (err) {
-      console.log("Cannot parse xml:", err);
-      process.exit(-1);
+  var cred = nexus.user+':'+nexus.pass;
+  var stream = fs.createWriteStream("postToNexus.sh");
+  stream.once('open', function(fd) {
+    function out(args) {
+      stream.write(args + "\n");
     }
 
-    var parser = new xml2js.Parser();
-    parser.parseString(data, function (err, result) {
-      //console.log(JSON.stringify(result, null,  2));
-      //console.log(JSON.stringify(result.locations, null,  2));
-      var cred = nexus.user+':'+nexus.pass;
-      
-      var stream = fs.createWriteStream("postToNexus.sh");
-      stream.once('open', function(fd) {
-        function out(args) {
-          stream.write(args + "\n");
-        }
+    out('#!/bin/sh');
+    out('url=' + nexus.urlForScript + '/service/local');
+    out('echo Nexus url: $url');
 
-        out('#!/bin/sh');
-        out('url=' + nexus.urlForScript + '/service/local');
-        out('echo Nexus url: $url');
-
-        var mirrors = [];
-
-        result.target.locations[0].location.forEach(function(location) {
-          var repo = location.repository[0].$;
-
-          var repoId = repo.id || rmTrailingSlash(repo.location);
-          var repoLocation = addTrailingSlash(repo.location);
-
-          out('echo "Posting new repo: '+ repoId + ', ' + repoLocation +'"');
-          var newRepo = {
-            "data": {
-              "repoType": "proxy",
-              "id": repoId,
-              "name": repoId,
-              "browseable": true,
-              "indexable": false,
-              "notFoundCacheTTL": 1440,
-              "artifactMaxAge": -1,
-              "metadataMaxAge": 1440,
-              "itemMaxAge": 1440,
-              "repoPolicy": "MIXED",
-              "provider": "p2",
-              "providerRole": "org.sonatype.nexus.proxy.repository.Repository",
-              "downloadRemoteIndexes": false,
-              "autoBlockActive": true,
-              "fileTypeValidation": true,
-              "exposed": true,
-              "checksumPolicy": "WARN",
-              "remoteStorage": {
-                "remoteStorageUrl": repoLocation,
-                "authentication": null,
-                "connectionSettings": null
-              }
-            }
-          };
-          out('curl -X POST -u '+cred+' -H "Content-Type: application/json" -d \''+JSON.stringify(newRepo)+'\' $url/repositories');
-
-          function validMirrorId(repoId) {
-            var cleanString = repoId.replace(/[@\|\%&\$<\(\)>\+\,/\:\?\*\\]/g, "");
-            return cleanString;
-          }
-
-          mirrors.push({
-            //mirror: {
-              id: validMirrorId(repoId) + '.mirror',
-              name: repoId + ' Mirror',
-              // tycho uses url as id for .target files: https://wiki.eclipse.org/Tycho/Target_Platform/Authentication_and_Mirrors
-              mirrorOf: repoId,
-              url: nexus.urlForMaven + '/content/repositories/'+ repoId + '/',
-              layout: 'p2',
-              mirrorOfLayouts: 'p2'
-            //}
-          });
-        });
+    var mirrors = [];
+    
+    fs.readFile(targetPath, function(err, data) {
+      if (err) {
+        console.log("Cannot parse xml:", err);
+        process.exit(-1);
+      }
+      var parser = new xml2js.Parser();
+      parser.parseString(data, function (err, result) {
+        //console.log(JSON.stringify(result, null,  2));
+        //console.log(JSON.stringify(result.locations, null,  2));
+        var repoIds = ["rcptt-releases"];
+        postProxiesFromEclipseRepo(mirrors, out, cred, repoIds);
+        postProxiesFromTarget(result, mirrors, out, cred);
 
         out('echo "Nexus Repositories:"');
         out('curl $url/repositories | grep name');
@@ -98,10 +47,82 @@ function run(targetPath) {
         console.log('Created postToNexus.sh');
 
         createSettings(mirrors);
+        //console.dir(result.target.locations);
       });
-      //console.dir(result.target.locations);
     });
+
   });
+}
+
+function postProxiesFromEclipseRepo(mirrors, out, cred, repoIds) {
+  for (var i = 0; i < repoIds.length; i++) {
+
+    var request = require('request');
+    request('https://repo.eclipse.org/service/local/repositories/'+repoIds[i], function (error, response, body) {
+      if (!error && response.statusCode == 200) {
+        console.log(body);
+      }
+      else {
+        console.log("Cannot mirror: " + repoIds[i], response.statusCode);
+        process.exit(-1);
+      }
+    })
+  }
+}
+
+function postProxiesFromTarget(result, mirrors, out, cred) {
+  result.target.locations[0].location.forEach(function(location) {
+  var repo = location.repository[0].$;
+
+  var repoId = repo.id || rmTrailingSlash(repo.location);
+  var repoLocation = addTrailingSlash(repo.location);
+
+  out('echo "Posting new repo: '+ repoId + ', ' + repoLocation +'"');
+  var newRepo = {
+    "data": {
+      "repoType": "proxy",
+      "id": repoId,
+      "name": repoId,
+      "browseable": true,
+      "indexable": false,
+      "notFoundCacheTTL": 1440,
+      "artifactMaxAge": -1,
+      "metadataMaxAge": 1440,
+      "itemMaxAge": 1440,
+      "repoPolicy": "MIXED",
+      "provider": "p2",
+      "providerRole": "org.sonatype.nexus.proxy.repository.Repository",
+      "downloadRemoteIndexes": false,
+      "autoBlockActive": true,
+      "fileTypeValidation": true,
+      "exposed": true,
+      "checksumPolicy": "WARN",
+      "remoteStorage": {
+        "remoteStorageUrl": repoLocation,
+        "authentication": null,
+        "connectionSettings": null
+      }
+    }
+  };
+  out('curl -X POST -u '+cred+' -H "Content-Type: application/json" -d \''+JSON.stringify(newRepo)+'\' $url/repositories');
+
+  function validMirrorId(repoId) {
+    var cleanString = repoId.replace(/[@\|\%&\$<\(\)>\+\,/\:\?\*\\]/g, "");
+    return cleanString;
+  }
+
+  mirrors.push({
+    //mirror: {
+      id: validMirrorId(repoId) + '.mirror',
+      name: repoId + ' Mirror',
+      // tycho uses url as id for .target files: https://wiki.eclipse.org/Tycho/Target_Platform/Authentication_and_Mirrors
+      mirrorOf: repoId,
+      url: nexus.urlForMaven + '/content/repositories/'+ repoId + '/',
+      layout: 'p2',
+      mirrorOfLayouts: 'p2'
+    //}
+  });
+});
 }
 
 function createSettings(mirrors) {
