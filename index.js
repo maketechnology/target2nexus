@@ -39,7 +39,7 @@ function run(targetPath, repoIds) {
           postProxiesFromTarget(result, mirrors, out, cred);
 
           out('echo "Nexus Repositories:"');
-          out("curl $url/repositories | grep -E '<id>|contentResourceURI'");
+          out("curl --silent $url/repositories | grep -E '<id>|contentResourceURI'");
 
           stream.end();
 
@@ -102,7 +102,7 @@ function postProxiesFromEclipseRepo(mirrors, out, cred, repoIds) {
           }
         }
       };
-      out('curl -X POST -u '+cred+' -H "Content-Type: application/json" -d \''+JSON.stringify(newRepo)+'\' $url/repositories');
+      out('curl --silent -X POST -u '+cred+' -H "Content-Type: application/json" -d \''+JSON.stringify(newRepo)+'\' $url/repositories');
 
       mirrors.push({
         //mirror: {
@@ -152,7 +152,7 @@ function postProxiesFromTarget(result, mirrors, out, cred) {
         }
       }
     };
-    out('curl -X POST -u '+cred+' -H "Content-Type: application/json" -d \''+JSON.stringify(newRepo)+'\' $url/repositories');
+    out('curl --silent -X POST -u '+cred+' -H "Content-Type: application/json" -d \''+JSON.stringify(newRepo)+'\' $url/repositories');
 
     mirrors.push({
       //mirror: {
